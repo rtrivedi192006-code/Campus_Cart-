@@ -27,7 +27,16 @@ export default function SiteHeader() {
 
         <nav className="topNav" aria-label="Primary">
           <NavLink to="/" className={({ isActive }) => (isActive ? 'active' : '')}>
-            Home
+            Marketplace
+          </NavLink>
+          <NavLink to="/chat" className={({ isActive }) => (isActive ? 'active' : '')}>
+            Chat
+          </NavLink>
+          <NavLink to="/sell" className={({ isActive }) => (isActive ? 'active' : '')}>
+            Sell
+          </NavLink>
+          <NavLink to="/wishlist" className={({ isActive }) => (isActive ? 'active' : '')}>
+            Wishlist
           </NavLink>
           <NavLink to="/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}>
             Dashboard

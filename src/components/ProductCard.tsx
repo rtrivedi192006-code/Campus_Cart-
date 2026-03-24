@@ -30,12 +30,14 @@ export default function ProductCard({
   animateOnMount,
   onPrimaryAction,
   onOpen,
+  recommendedIdle,
 }: {
   product: Product
   index: number
   animateOnMount: boolean
   onPrimaryAction: (productId: string) => void
   onOpen?: (productId: string) => void
+  recommendedIdle?: boolean
 }) {
   return (
     <motion.article
@@ -45,8 +47,18 @@ export default function ProductCard({
       custom={index}
       variants={cardVariants}
       initial={animateOnMount ? 'hidden' : false}
-      animate={animateOnMount ? 'show' : undefined}
-      transition={{ type: 'spring', stiffness: 380, damping: 22 }}
+      animate={
+        recommendedIdle
+          ? { y: [0, -6, 0], rotate: [0, -0.5, 0] }
+          : animateOnMount
+            ? 'show'
+            : undefined
+      }
+      transition={
+        recommendedIdle
+          ? { duration: 2.7 + (index % 3) * 0.2, repeat: Infinity, ease: 'easeInOut' }
+          : { type: 'spring', stiffness: 380, damping: 22 }
+      }
       whileHover={{
         y: -18,
         rotate: -0.8,
@@ -62,6 +74,9 @@ export default function ProductCard({
         if (e.key === 'Enter' || e.key === ' ') onOpen(product.id)
       }}
     >
+      <div className="productMedia">
+        <img src={product.image} alt={product.title} className="productImage" loading="lazy" />
+      </div>
       <div className="productCardTop">
         <div className="productBadge">
           <span className="productBadgeDot" aria-hidden="true" />
@@ -101,11 +116,11 @@ export default function ProductCard({
           className="primaryBtn primaryBtn--fill"
           onClick={(e) => {
             e.stopPropagation()
-            onPrimaryAction(product.id)
+            onOpen?.(product.id)
           }}
           type="button"
         >
-          Buy / Exchange
+          View Details
         </MagneticButton>
         <MagneticButton
           intensity={10}

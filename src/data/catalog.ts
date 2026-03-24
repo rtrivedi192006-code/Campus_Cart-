@@ -15,6 +15,7 @@ export type Product = {
   condition: 'New' | 'Like new' | 'Good' | 'Fair'
   seller: string
   campusPickup: string
+  image: string
   gradient: string
   tags?: {
     urgentSale?: boolean
@@ -63,6 +64,7 @@ export const products: Product[] = [
     condition: 'Good',
     seller: 'Aarav',
     campusPickup: 'Library Block',
+    image: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=900&q=80',
     gradient: 'linear-gradient(135deg, rgba(139,92,246,0.35), rgba(34,211,238,0.12))',
     tags: { urgentSale: true },
   },
@@ -75,6 +77,7 @@ export const products: Product[] = [
     condition: 'Like new',
     seller: 'Meera',
     campusPickup: 'Cafeteria Gate',
+    image: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=900&q=80',
     gradient: 'linear-gradient(135deg, rgba(34,211,238,0.28), rgba(139,92,246,0.14))',
     tags: { newItem: true },
   },
@@ -87,6 +90,7 @@ export const products: Product[] = [
     condition: 'Good',
     seller: 'Rohan',
     campusPickup: 'Student Center',
+    image: 'https://images.unsplash.com/photo-1456324504439-367cee3b3c32?auto=format&fit=crop&w=900&q=80',
     gradient: 'linear-gradient(135deg, rgba(99,102,241,0.28), rgba(34,211,238,0.12))',
   },
   {
@@ -98,6 +102,7 @@ export const products: Product[] = [
     condition: 'Like new',
     seller: 'Zoya',
     campusPickup: 'Tech Lab',
+    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=900&q=80',
     gradient: 'linear-gradient(135deg, rgba(34,197,94,0.26), rgba(59,130,246,0.14))',
     tags: { urgentSale: true },
   },
@@ -110,6 +115,7 @@ export const products: Product[] = [
     condition: 'New',
     seller: 'Kabir',
     campusPickup: 'Main Hostel Lobby',
+    image: 'https://images.unsplash.com/photo-1527814050087-3793815479db?auto=format&fit=crop&w=900&q=80',
     gradient: 'linear-gradient(135deg, rgba(59,130,246,0.28), rgba(34,197,94,0.12))',
     tags: { newItem: true },
   },
@@ -122,6 +128,7 @@ export const products: Product[] = [
     condition: 'Good',
     seller: 'Nisha',
     campusPickup: 'Library Block',
+    image: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=900&q=80',
     gradient: 'linear-gradient(135deg, rgba(34,197,94,0.22), rgba(168,85,247,0.12))',
   },
   {
@@ -133,6 +140,7 @@ export const products: Product[] = [
     condition: 'Good',
     seller: 'Samar',
     campusPickup: 'Hostel Block A',
+    image: 'https://images.unsplash.com/photo-1524484485831-a92ffc0de03f?auto=format&fit=crop&w=900&q=80',
     gradient: 'linear-gradient(135deg, rgba(249,115,22,0.26), rgba(168,85,247,0.10))',
     tags: { newItem: true },
   },
@@ -145,6 +153,7 @@ export const products: Product[] = [
     condition: 'Like new',
     seller: 'Ishaan',
     campusPickup: 'Student Center',
+    image: 'https://images.unsplash.com/photo-1586769852044-692d6e3703f0?auto=format&fit=crop&w=900&q=80',
     gradient: 'linear-gradient(135deg, rgba(168,85,247,0.18), rgba(249,115,22,0.14))',
   },
   {
@@ -156,6 +165,7 @@ export const products: Product[] = [
     condition: 'Fair',
     seller: 'Ananya',
     campusPickup: 'Main Hostel Lobby',
+    image: 'https://images.unsplash.com/photo-1563302111-eab4c7d3f373?auto=format&fit=crop&w=900&q=80',
     gradient: 'linear-gradient(135deg, rgba(249,115,22,0.22), rgba(59,130,246,0.10))',
     tags: { urgentSale: true },
   },
@@ -168,6 +178,7 @@ export const products: Product[] = [
     condition: 'New',
     seller: 'Tara',
     campusPickup: 'Campus Gate',
+    image: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=900&q=80',
     gradient: 'linear-gradient(135deg, rgba(6,182,212,0.22), rgba(99,102,241,0.12))',
     tags: { newItem: true },
   },
@@ -180,6 +191,7 @@ export const products: Product[] = [
     condition: 'Good',
     seller: 'Dev',
     campusPickup: 'Tech Lab',
+    image: 'https://images.unsplash.com/photo-1616627561839-074385245ff6?auto=format&fit=crop&w=900&q=80',
     gradient: 'linear-gradient(135deg, rgba(99,102,241,0.20), rgba(6,182,212,0.12))',
   },
   {
@@ -191,6 +203,7 @@ export const products: Product[] = [
     condition: 'Like new',
     seller: 'Prisha',
     campusPickup: 'Library Block',
+    image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=900&q=80',
     gradient: 'linear-gradient(135deg, rgba(6,182,212,0.18), rgba(139,92,246,0.10))',
   },
   // Extra variety for nicer animations on filter
@@ -203,6 +216,7 @@ export const products: Product[] = [
     condition: 'Like new',
     seller: 'Harsh',
     campusPickup: 'Cafeteria Gate',
+    image: 'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=900&q=80',
     gradient: 'linear-gradient(135deg, rgba(139,92,246,0.22), rgba(99,102,241,0.10))',
   },
   {
@@ -214,6 +228,7 @@ export const products: Product[] = [
     condition: 'Good',
     seller: 'Farhan',
     campusPickup: 'Main Hostel Lobby',
+    image: 'https://images.unsplash.com/photo-1589256469067-ea99122bbdc4?auto=format&fit=crop&w=900&q=80',
     gradient: 'linear-gradient(135deg, rgba(59,130,246,0.26), rgba(34,197,94,0.12))',
     tags: { urgentSale: true },
   },
@@ -226,6 +241,7 @@ export const products: Product[] = [
     condition: 'New',
     seller: 'Kavya',
     campusPickup: 'Hostel Block A',
+    image: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=900&q=80',
     gradient: 'linear-gradient(135deg, rgba(249,115,22,0.20), rgba(6,182,212,0.10))',
   },
   {
@@ -237,6 +253,7 @@ export const products: Product[] = [
     condition: 'Good',
     seller: 'Simran',
     campusPickup: 'Student Center',
+    image: 'https://images.unsplash.com/photo-1615529328331-f8917597711f?auto=format&fit=crop&w=900&q=80',
     gradient: 'linear-gradient(135deg, rgba(6,182,212,0.18), rgba(168,85,247,0.10))',
   },
 ]

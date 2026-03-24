@@ -6,6 +6,9 @@ import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import DashboardPage from './pages/DashboardPage'
 import NotFoundPage from './pages/NotFoundPage'
+import WishlistPage from './pages/WishlistPage'
+import ChatPage from './pages/ChatPage'
+import SellPage from './pages/SellPage'
 
 export default function App() {
   const location = useLocation()
@@ -18,6 +21,9 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/sell" element={<SellPage />} />
+          <Route path="/wishlist" element={<WishlistPage />} />
           <Route
             path="/dashboard"
             element={

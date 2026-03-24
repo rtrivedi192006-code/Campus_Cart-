@@ -1,7 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { X, MapPin, User } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import type { Product } from '../data/catalog'
-import { formatINR } from '../data/catalog'
+import { formatINR, products } from '../data/catalog'
 import WishlistButton from './WishlistButton'
 import MagneticButton from './MagneticButton'
 
@@ -16,6 +17,16 @@ export default function ProductModal({
   onClose: () => void
   onPrimaryAction: (productId: string) => void
 }) {
+  const [barterItemId, setBarterItemId] = useState<string>('')
+  const [barterStatus, setBarterStatus] = useState<'Pending' | 'Accepted' | 'Rejected' | null>(null)
+
+  const barterOptions = useMemo(() => {
+    if (!product) return []
+    return products.filter((p) => p.id !== product.id).slice(0, 6)
+  }, [product])
+
+  const selectedBarter = barterOptions.find((x) => x.id === barterItemId) ?? null
+
   return (
     <AnimatePresence>
       {open && product ? (
@@ -107,6 +118,93 @@ export default function ProductModal({
                 <MagneticButton className="ghostBtn" intensity={10} type="button" onClick={onClose}>
                   Back
                 </MagneticButton>
+              </div>
+
+              <div className="barterPanel">
+                <h3 className="barterTitle">Barter System</h3>
+                <p className="barterSub">Propose an exchange with one of your items.</p>
+
+                <div className="barterRow">
+                  <select
+                    className="barterSelect"
+                    value={barterItemId}
+                    onChange={(e) => {
+                      setBarterItemId(e.target.value)
+                      setBarterStatus('Pending')
+                    }}
+                  >
+                    <option value="">Select item to exchange</option>
+                    {barterOptions.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.title}
+                      </option>
+                    ))}
+                  </select>
+
+                  <MagneticButton
+                    className="primaryBtn"
+                    intensity={12}
+                    type="button"
+                    disabled={!barterItemId}
+                    onClick={() => setBarterStatus('Pending')}
+                  >
+                    Propose Exchange
+                  </MagneticButton>
+                </div>
+
+                {selectedBarter ? (
+                  <motion.div
+                    className="barterExchange"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <motion.div
+                      className="barterItem"
+                      animate={{ x: [0, 12, 0] }}
+                      transition={{ duration: 0.8, ease: 'easeInOut' }}
+                    >
+                      {selectedBarter.title}
+                    </motion.div>
+                    <motion.div
+                      className="barterSwap"
+                      animate={{ rotate: [0, 180, 360] }}
+                      transition={{ duration: 1.1, repeat: Infinity, ease: 'linear' }}
+                    >
+                      ↔
+                    </motion.div>
+                    <motion.div
+                      className="barterItem"
+                      animate={{ x: [0, -12, 0] }}
+                      transition={{ duration: 0.8, ease: 'easeInOut' }}
+                    >
+                      {product.title}
+                    </motion.div>
+                  </motion.div>
+                ) : null}
+
+                {barterStatus ? (
+                  <div className="barterStatusRow">
+                    <span className={`statusBadge statusBadge--${barterStatus.toLowerCase()}`}>
+                      {barterStatus}
+                    </span>
+                    <div className="barterActions">
+                      <button
+                        type="button"
+                        className="ghostBtn ghostBtn--soft"
+                        onClick={() => setBarterStatus('Accepted')}
+                      >
+                        Accept
+                      </button>
+                      <button
+                        type="button"
+                        className="ghostBtn ghostBtn--soft"
+                        onClick={() => setBarterStatus('Rejected')}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
           </motion.div>

@@ -16,6 +16,8 @@ export default function DashboardPage() {
     const likedSet = new Set(likedIds)
     return products.filter((p) => likedSet.has(p.id))
   }, [likedIds])
+  const myListings = useMemo(() => products.filter((p) => p.seller === (user?.name ?? '')), [user?.name])
+  const soldItems = useMemo(() => products.filter((_, i) => i % 5 === 0).slice(0, 3), [])
 
   return (
     <div className="page">
@@ -44,14 +46,18 @@ export default function DashboardPage() {
           </div>
 
           <div className="dashStats">
-            <div className="statCard statCard--glass">
+            <motion.div className="statCard statCard--glass" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
               <div className="statValue">{wishlistProducts.length}</div>
               <div className="statLabel">Wishlist items</div>
-            </div>
-            <div className="statCard statCard--glass">
-              <div className="statValue">{products.length}</div>
-              <div className="statLabel">Marketplace listings</div>
-            </div>
+            </motion.div>
+            <motion.div className="statCard statCard--glass" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+              <div className="statValue">{myListings.length || products.length}</div>
+              <div className="statLabel">Total listings</div>
+            </motion.div>
+            <motion.div className="statCard statCard--glass" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+              <div className="statValue">{soldItems.length}</div>
+              <div className="statLabel">Items sold</div>
+            </motion.div>
           </div>
         </motion.div>
       </section>
@@ -59,22 +65,21 @@ export default function DashboardPage() {
       <section className="section">
         <div className="sectionHeader">
           <div>
-            <h2 className="sectionTitle">Wishlist</h2>
-            <p className="sectionSub">Your saved items (demo state).</p>
+            <h2 className="sectionTitle">My Listings</h2>
+            <p className="sectionSub">Items you listed for sale/exchange.</p>
           </div>
         </div>
-
-        {wishlistProducts.length === 0 ? (
+        {(myListings.length > 0 ? myListings : products.slice(0, 3)).length === 0 ? (
           <div className="emptyState">
-            <div className="emptyTitle">No wishlist items yet.</div>
-            <div className="emptySub">Tap the heart on any listing to save it.</div>
+            <div className="emptyTitle">No listings yet.</div>
+            <div className="emptySub">Add your first item from the Sell page.</div>
             <button className="primaryBtn" type="button" onClick={() => navigate('/')}>
               Explore now
             </button>
           </div>
         ) : (
           <div className="wishlistGrid">
-            {wishlistProducts.map((p) => (
+            {(myListings.length > 0 ? myListings : products.slice(0, 3)).map((p) => (
               <div key={p.id} className="wishlistCard">
                 <div className="wishlistCardGlow" style={{ backgroundImage: p.gradient }} />
                 <div className="wishlistCardTop">
@@ -92,6 +97,51 @@ export default function DashboardPage() {
             ))}
           </div>
         )}
+      </section>
+
+      <section className="section">
+        <div className="sectionHeader">
+          <div>
+            <h2 className="sectionTitle">Sold Items</h2>
+            <p className="sectionSub">Completed campus deals.</p>
+          </div>
+        </div>
+        <div className="wishlistGrid">
+          {soldItems.map((p) => (
+            <div key={p.id} className="wishlistCard">
+              <div className="wishlistCardGlow" style={{ backgroundImage: p.gradient }} />
+              <div className="wishlistCardTop">
+                <div className="wishlistCardTitle">{p.title}</div>
+                <div className="statusBadge statusBadge--accepted">Sold</div>
+              </div>
+              <div className="wishlistCardMeta">
+                <span>{p.condition}</span>
+                <span className="dotSep" aria-hidden="true">•</span>
+                <span>{formatINR(p.price)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="sectionHeader">
+          <div>
+            <h2 className="sectionTitle">Wishlist</h2>
+            <p className="sectionSub">Quick preview of your saved items.</p>
+          </div>
+        </div>
+        <div className="wishlistGrid">
+          {wishlistProducts.slice(0, 3).map((p) => (
+            <div key={p.id} className="wishlistCard">
+              <div className="wishlistCardGlow" style={{ backgroundImage: p.gradient }} />
+              <div className="wishlistCardTop">
+                <div className="wishlistCardTitle">{p.title}</div>
+                <div className="wishlistCardPrice">{formatINR(p.price)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
     </div>
   )

@@ -19,6 +19,8 @@ export default function HomePage() {
   const { viewedIds, addViewed, clear: clearRecent } = useRecentlyViewed()
   const [query, setQuery] = useState('')
   const [categoryId, setCategoryId] = useState<'all' | string>('all')
+  const [conditionFilter, setConditionFilter] = useState<'all' | Product['condition']>('all')
+  const [maxPrice, setMaxPrice] = useState(1000)
 
   // Used to ensure "fall from top on load" runs only once.
   const [animateIn, setAnimateIn] = useState(true)
@@ -48,8 +50,14 @@ export default function HomePage() {
       })
     }
 
+    if (conditionFilter !== 'all') {
+      list = list.filter((p) => p.condition === conditionFilter)
+    }
+
+    list = list.filter((p) => p.price <= maxPrice)
+
     return list
-  }, [categoryId, query])
+  }, [categoryId, query, conditionFilter, maxPrice])
 
   const [toast, setToast] = useState<string | null>(null)
 
@@ -272,6 +280,7 @@ export default function HomePage() {
                   primaryAction(id)
                 }}
                 onOpen={openDetails}
+                recommendedIdle
               />
             ))}
           </motion.div>
@@ -347,6 +356,8 @@ export default function HomePage() {
               onClick={() => {
                 setQuery('')
                 setCategoryId('all')
+                setConditionFilter('all')
+                setMaxPrice(1000)
               }}
             >
               Reset filters
@@ -354,29 +365,74 @@ export default function HomePage() {
           </div>
         </div>
 
-        <LayoutGroup>
-          <motion.div
-            className="productGrid"
-            layout
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <AnimatePresence mode="popLayout" initial={false}>
-              {filteredProducts.map((p: Product, i: number) => (
-                <ProductCard
-                  key={p.id}
-                  product={p}
-                  index={i}
-                  animateOnMount={animateIn}
-                  onPrimaryAction={(id) => {
-                    addViewed(id)
-                    primaryAction(id)
-                  }}
-                  onOpen={openDetails}
-                />
-              ))}
-            </AnimatePresence>
-          </motion.div>
-        </LayoutGroup>
+        <div className="marketShell">
+          <aside className="filterSidebar">
+            <h3 className="sidebarTitle">Filters</h3>
+            <label className="field">
+              <span className="fieldLabel">Category</span>
+              <select
+                className="fieldInput"
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+              >
+                <option value="all">All</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span className="fieldLabel">Condition</span>
+              <select
+                className="fieldInput"
+                value={conditionFilter}
+                onChange={(e) => setConditionFilter(e.target.value as 'all' | Product['condition'])}
+              >
+                <option value="all">All</option>
+                <option value="New">New</option>
+                <option value="Like new">Like new</option>
+                <option value="Good">Good</option>
+                <option value="Fair">Fair</option>
+              </select>
+            </label>
+            <label className="field">
+              <span className="fieldLabel">Max Price: Rs {maxPrice}</span>
+              <input
+                type="range"
+                min={100}
+                max={1000}
+                step={50}
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(Number(e.target.value))}
+              />
+            </label>
+          </aside>
+          <LayoutGroup>
+            <motion.div
+              className="productGrid"
+              layout
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <AnimatePresence mode="popLayout" initial={false}>
+                {filteredProducts.map((p: Product, i: number) => (
+                  <ProductCard
+                    key={p.id}
+                    product={p}
+                    index={i}
+                    animateOnMount={animateIn}
+                    onPrimaryAction={(id) => {
+                      addViewed(id)
+                      primaryAction(id)
+                    }}
+                    onOpen={openDetails}
+                  />
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          </LayoutGroup>
+        </div>
       </section>
 
       <ProductModal
