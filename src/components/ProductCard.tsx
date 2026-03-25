@@ -47,18 +47,8 @@ export default function ProductCard({
       custom={index}
       variants={cardVariants}
       initial={animateOnMount ? 'hidden' : false}
-      animate={
-        recommendedIdle
-          ? { y: [0, -6, 0], rotate: [0, -0.5, 0] }
-          : animateOnMount
-            ? 'show'
-            : undefined
-      }
-      transition={
-        recommendedIdle
-          ? { duration: 2.7 + (index % 3) * 0.2, repeat: Infinity, ease: 'easeInOut' }
-          : { type: 'spring', stiffness: 380, damping: 22 }
-      }
+      animate={animateOnMount ? 'show' : undefined}
+      transition={{ type: 'spring', stiffness: 380, damping: 22 }}
       whileHover={{
         y: -18,
         rotate: -0.8,
