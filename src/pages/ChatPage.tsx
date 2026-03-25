@@ -1,13 +1,17 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Send, MoreVertical, Phone } from 'lucide-react'
+import { useAuth } from '../state/AuthContext'
+import { io, Socket } from 'socket.io-client'
 import './ChatPage.css'
 
 type Message = {
-  id: string
+  _id: string
+  senderId: string
+  receiverId: string
   text: string
-  sender: 'me' | 'other'
-  timestamp: string
+  createdAt: string
+  updatedAt: string
 }
 
 type Conversation = {
@@ -15,78 +19,226 @@ type Conversation = {
   name: string
   product: string
   messages: Message[]
+  otherUserId: string
 }
 
-const mockConversations: Conversation[] = [
-  {
-    id: 'c1',
-    name: 'Kabir',
-    product: 'Wireless Mouse (Silent Click)',
-    messages: [
-      { id: 'm1', text: 'Hey, is the mouse still available?', sender: 'me', timestamp: '10:30 AM' },
-      { id: 'm2', text: 'Yes, it is! You can pick it up today at the Main Hostel Lobby.', sender: 'other', timestamp: '10:35 AM' },
-      { id: 'm3', text: 'Awesome, can we meet around 5 PM?', sender: 'me', timestamp: '10:36 AM' },
-    ],
-  },
-  {
-    id: 'c2',
-    name: 'Zoya',
-    product: 'Noise-Canceling Headphones',
-    messages: [
-      { id: 'm1', text: 'Hi Zoya, are the headphones still under warranty?', sender: 'me', timestamp: 'Yesterday' },
-      { id: 'm2', text: 'Hey! Yes, they have 3 months of warranty left.', sender: 'other', timestamp: 'Yesterday' },
-    ],
-  },
-]
-
 export default function ChatPage() {
-  const [activeId, setActiveId] = useState<string>(mockConversations[0].id)
-  const [conversations, setConversations] = useState(mockConversations)
-  const [inputValue, setInputValue] = useState('')
+  const { user } = useAuth()
+  const [activeId, setActiveId] = useState<string>('')
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [isTyping, setIsTyping] = useState(false)
+  const [connectionStatus, setConnectionStatus] = useState<'online' | 'offline'>('offline')
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const socketRef = useRef<Socket | null>(null)
+
+  // Function to fetch messages from backend
+  const fetchMessages = async (otherUserId: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        console.error('No token found')
+        return
+      }
+
+      const response = await fetch(`http://localhost:5000/api/messages/${otherUserId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch messages')
+      }
+
+      const messages: Message[] = await response.json()
+      return messages
+    } catch (error) {
+      console.error('Error fetching messages:', error)
+      return []
+    }
+  }
+
+  // Load conversations on component mount
+  useEffect(() => {
+    const loadConversations = async () => {
+      setLoading(true)
+      // For now, we'll use mock conversations but fetch real messages
+      // In a real app, you'd fetch conversation list from backend
+      const mockConversations: Conversation[] = [
+        {
+          id: 'c1',
+          name: 'Kabir',
+          product: 'Wireless Mouse (Silent Click)',
+          otherUserId: '507f1f77bcf86cd799439011', // Replace with real user ID
+          messages: []
+        },
+        {
+          id: 'c2',
+          name: 'Zoya',
+          product: 'Noise-Canceling Headphones',
+          otherUserId: '507f1f77bcf86cd799439012', // Replace with real user ID
+          messages: []
+        },
+      ]
+
+      // Fetch messages for each conversation
+      for (const conv of mockConversations) {
+        const messages = await fetchMessages(conv.otherUserId)
+        conv.messages = messages
+      }
+
+      setConversations(mockConversations)
+      setActiveId(mockConversations[0]?.id || '')
+      setLoading(false)
+    }
+
+    loadConversations()
+  }, [])
 
   const activeConv = conversations.find(c => c.id === activeId)!
 
+  // Function to handle conversation selection
+  const selectConversation = async (conversationId: string) => {
+    setActiveId(conversationId)
+    // Messages will be refreshed automatically by the polling useEffect
+  }
+
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    messagesEndRef.current?.scrollIntoView({ 
+      behavior: 'smooth',
+      block: 'end',
+      inline: 'nearest'
+    })
   }
 
   useEffect(() => {
     scrollToBottom()
   }, [activeConv.messages])
 
-  const handleSend = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!inputValue.trim()) return
+  // Socket.IO setup
+  useEffect(() => {
+    if (!user) return
 
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      text: inputValue,
-      sender: 'me',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    }
+    // Initialize socket connection
+    socketRef.current = io('http://localhost:5000', {
+      transports: ['websocket', 'polling'],
+      autoConnect: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000
+    })
 
-    setConversations(prev =>
-      prev.map(c =>
-        c.id === activeId ? { ...c, messages: [...c.messages, newMessage] } : c
+    const socket = socketRef.current
+
+    // Connection events
+    socket.on('connect', () => {
+      console.log('Connected to server')
+      setConnectionStatus('online')
+      
+      // Join user's room
+      socket.emit('join', user._id)
+    })
+
+    socket.on('disconnect', () => {
+      console.log('Disconnected from server')
+      setConnectionStatus('offline')
+    })
+
+    // Message events
+    socket.on('receiveMessage', (message: Message) => {
+      console.log('Received message:', message)
+      
+      // Update conversations with new message
+      setConversations(prev =>
+        prev.map(c => {
+          // Check if this message belongs to this conversation
+          if ((message.senderId === c.otherUserId && message.receiverId === user._id) ||
+              (message.receiverId === c.otherUserId && message.senderId === user._id)) {
+            return { ...c, messages: [...c.messages, message] }
+          }
+          return c
+        })
       )
-    )
-    setInputValue('')
-    
-    // Simulate auto-reply after 1.5s
-    setTimeout(() => {
-      const replyMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: 'Sounds good to me! 🎉',
-        sender: 'other',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      }
+    })
+
+    socket.on('messageSent', (message: Message) => {
+      console.log('Message sent confirmation:', message)
+      
+      // Replace temporary message with real message
       setConversations(prev =>
         prev.map(c =>
-          c.id === activeId ? { ...c, messages: [...c.messages, replyMessage] } : c
+          c.id === activeId ? {
+            ...c,
+            messages: c.messages.map(m => 
+              m._id.startsWith('temp-') && m.text === message.text ? message : m
+            )
+          } : c
         )
       )
-    }, 1500)
+    })
+
+    socket.on('messageError', (error) => {
+      console.error('Message error:', error)
+      
+      // Remove failed temporary message
+      setConversations(prev =>
+        prev.map(c =>
+          c.id === activeId ? {
+            ...c,
+            messages: c.messages.filter(m => !m._id.startsWith('temp-'))
+          } : c
+        )
+      )
+      
+      // Could show error toast here
+      alert('Failed to send message. Please try again.')
+    })
+
+    // Cleanup on unmount
+    return () => {
+      socket.disconnect()
+    }
+  }, [user])
+
+  // Function to send a message
+  const sendMessage = async (receiverId: string, text: string): Promise<Message | null> => {
+    if (!socketRef.current || !user) return null
+
+    const tempMessage: Message = {
+      _id: `temp-${Date.now()}`,
+      senderId: user._id,
+      receiverId,
+      text,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+
+    // Emit message via Socket.IO
+    socketRef.current.emit('sendMessage', {
+      senderId: user._id,
+      receiverId,
+      text
+    })
+
+    return tempMessage
+  }
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!inputValue.trim() || !activeConv) return
+
+    const newMessage = await sendMessage(activeConv.otherUserId, inputValue)
+    if (newMessage) {
+      // Update local state optimistically
+      setConversations(prev =>
+        prev.map(c =>
+          c.id === activeId ? { ...c, messages: [...c.messages, newMessage] } : c
+        )
+      )
+      setInputValue('')
+    }
   }
 
   return (
@@ -113,49 +265,96 @@ export default function ChatPage() {
             <h2 className="chatSidebarTitle">Conversations</h2>
           </div>
           <div className="chatList">
-            {conversations.map(conv => (
-              <div 
-                key={conv.id} 
-                className={`chatListItem ${activeId === conv.id ? 'chatListItem--active' : ''}`}
-                onClick={() => setActiveId(conv.id)}
-              >
-                <div className="chatListName">{conv.name}</div>
-                <div className="chatListProduct">{conv.product}</div>
-              </div>
-            ))}
+            {loading ? (
+              <div className="loading">Loading conversations...</div>
+            ) : (
+              conversations.map(conv => (
+                <div 
+                  key={conv.id} 
+                  className={`chatListItem ${activeId === conv.id ? 'chatListItem--active' : ''}`}
+                  onClick={() => selectConversation(conv.id)}
+                >
+                  <div className="chatListName">{conv.name}</div>
+                  <div className="chatListProduct">{conv.product}</div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
         <div className="chatMain">
           <div className="chatHeader">
             <div className="chatHeaderInfo">
-              <h3 className="chatHeaderName">{activeConv.name}</h3>
-              <span className="chatHeaderProduct">Regarding: {activeConv.product}</span>
+              <h3 className="chatHeaderName">
+                {loading ? 'Loading...' : activeConv?.name || 'Select a conversation'}
+              </h3>
+              <span className="chatHeaderProduct">
+                {loading ? '' : activeConv ? `Regarding: ${activeConv.product}` : ''}
+              </span>
             </div>
-            <div style={{ display: 'flex', gap: '16px', color: 'var(--text)' }}>
-              <Phone size={20} cursor="pointer" />
-              <MoreVertical size={20} cursor="pointer" />
+            <div className="chatHeaderActions">
+              <div className={`connectionStatus connectionStatus--${connectionStatus}`}>
+                <div className="connectionDot"></div>
+                <span className="connectionText">{connectionStatus === 'online' ? 'Online' : 'Offline'}</span>
+              </div>
+              <div style={{ display: 'flex', gap: '16px', color: 'var(--text)' }}>
+                <Phone size={20} cursor="pointer" />
+                <MoreVertical size={20} cursor="pointer" />
+              </div>
             </div>
           </div>
 
           <div className="chatMessages">
-            <AnimatePresence initial={false}>
-              {activeConv.messages.map((msg) => (
-                <motion.div
-                  key={msg.id}
-                  className={`messageWrapper messageWrapper--${msg.sender === 'me' ? 'sent' : 'received'}`}
-                  initial={{ opacity: 0, x: msg.sender === 'me' ? 20 : -20, y: 10 }}
-                  animate={{ opacity: 1, x: 0, y: 0 }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 24 }}
-                  layout
-                >
-                  <div className={`messageBubble messageBubble--${msg.sender === 'me' ? 'sent' : 'received'}`}>
-                    {msg.text}
-                  </div>
-                  <div className="messageTime">{msg.timestamp}</div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+            {loading ? (
+              <div className="loading">Loading messages...</div>
+            ) : activeConv?.messages.length === 0 ? (
+              <div className="emptyChat">
+                <div className="emptyChatIcon">💬</div>
+                <div className="emptyChatText">No messages yet. Start the conversation!</div>
+              </div>
+            ) : (
+              <AnimatePresence initial={false}>
+                {activeConv?.messages.map((msg) => {
+                  const isMe = msg.senderId === user?._id
+                  const messageDate = new Date(msg.createdAt)
+                  const today = new Date()
+                  const isToday = messageDate.toDateString() === today.toDateString()
+                  
+                  let timestamp
+                  if (isToday) {
+                    timestamp = messageDate.toLocaleTimeString([], { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })
+                  } else {
+                    timestamp = messageDate.toLocaleDateString([], {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })
+                  }
+                  
+                  return (
+                    <motion.div
+                      key={msg._id}
+                      className={`messageWrapper messageWrapper--${isMe ? 'sent' : 'received'} ${msg._id.startsWith('temp-') ? 'messageWrapper--pending' : ''}`}
+                      initial={{ opacity: 0, x: isMe ? 20 : -20, y: 10 }}
+                      animate={{ opacity: 1, x: 0, y: 0 }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+                      layout
+                    >
+                      <div className={`messageBubble messageBubble--${isMe ? 'sent' : 'received'} ${msg._id.startsWith('temp-') ? 'messageBubble--pending' : ''}`}>
+                        {msg.text}
+                      </div>
+                      <div className="messageTime">
+                        {msg._id.startsWith('temp-') ? 'Sending...' : timestamp}
+                      </div>
+                    </motion.div>
+                  )
+                })}
+              </AnimatePresence>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
@@ -167,16 +366,26 @@ export default function ChatPage() {
                 placeholder="Type a message..."
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    handleSend(e as any)
+                  }
+                }}
+                autoFocus
               />
               <button 
                 type="submit" 
                 className="chatSendBtn"
                 disabled={!inputValue.trim()}
-                title="Send Message"
+                title={inputValue.trim() ? "Send Message (Enter)" : "Type a message to send"}
               >
                 <Send size={18} />
               </button>
             </form>
+            <div className="chatInputHint">
+              Press Enter to send • Shift+Enter for new line
+            </div>
           </div>
         </div>
       </motion.div>

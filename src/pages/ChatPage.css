@@ -38,6 +38,36 @@
   gap: 8px;
 }
 
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  color: var(--text-muted);
+  font-size: 16px;
+}
+
+.emptyChat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.emptyChatIcon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.emptyChatText {
+  font-size: 16px;
+  max-width: 200px;
+}
+
 .chatListItem {
   padding: 14px;
   border-radius: 12px;
@@ -105,6 +135,70 @@
   margin-top: 2px;
 }
 
+.chatHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.connectionStatus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.connectionStatus--online {
+  color: #10b981;
+}
+
+.connectionStatus--offline {
+  color: #ef4444;
+}
+
+.connectionDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.messageWrapper--pending {
+  opacity: 0.7;
+}
+
+.messageBubble--pending {
+  position: relative;
+}
+
+.messageBubble--pending::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -20px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #ccc;
+  border-top: 2px solid var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .chatMessages {
   flex: 1;
   overflow-y: auto;
@@ -136,12 +230,16 @@
   font-size: 15px;
   line-height: 1.4;
   box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  word-wrap: break-word;
+  max-width: 100%;
+  position: relative;
 }
 
 .messageBubble--sent {
   background: linear-gradient(135deg, rgba(170, 59, 255, 0.8), rgba(34, 211, 238, 0.8));
   color: white;
   border-bottom-right-radius: 4px;
+  margin-left: auto;
 }
 
 .messageBubble--received {
@@ -149,6 +247,7 @@
   border: 1px solid var(--border);
   color: var(--text-h);
   border-bottom-left-radius: 4px;
+  margin-right: auto;
 }
 
 .messageTime {
@@ -214,4 +313,12 @@
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
+}
+
+.chatInputHint {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 8px;
+  opacity: 0.7;
 }
