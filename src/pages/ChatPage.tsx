@@ -31,13 +31,41 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const socketRef = useRef<Socket | null>(null)
 
-  // Function to fetch messages from backend
+  const API_BASE_URL = 'http://192.168.0.100:5000' // <YOUR_LOCAL_IP> for mobile; update before production
+
+  // Function to fetch messages from backend (HTTP)
   const fetchMessages = async (otherUserId: string) => {
     try {
       const token = localStorage.getItem('token')
       if (!token) {
-        console.error('No token found')
-        return
+        console.error('[ChatPage] fetchMessages: no token')
+        return []
+      }
+
+      const endpoint = `${API_BASE_URL}/api/messages/${otherUserId}`
+      console.log('[ChatPage] fetchMessages request:', endpoint)
+
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        const text = await response.text()
+        throw new Error(`[ChatPage] fetchMessages failed: ${response.status} ${text}`)
+      }
+
+      const data: Message[] = await response.json()
+      console.log('[ChatPage] fetchMessages response', data.length)
+      return data
+    } catch (error) {
+      console.error('[ChatPage] fetchMessages error', error)
+      return []
+    }
+  }
       }
 
       const response = await fetch(`http://localhost:5000/api/messages/${otherUserId}`, {
@@ -204,7 +232,10 @@ export default function ChatPage() {
 
   // Function to send a message
   const sendMessage = async (receiverId: string, text: string): Promise<Message | null> => {
-    if (!socketRef.current || !user) return null
+    if (!user) {
+      console.error('[ChatPage] sendMessage: no user')
+      return null
+    }
 
     const tempMessage: Message = {
       _id: `temp-${Date.now()}`,
@@ -215,14 +246,41 @@ export default function ChatPage() {
       updatedAt: new Date().toISOString()
     }
 
-    // Emit message via Socket.IO
-    socketRef.current.emit('sendMessage', {
-      senderId: user._id,
-      receiverId,
-      text
-    })
+    if (socketRef.current && socketRef.current.connected) {
+      console.log('[ChatPage] sendMessage via socket', { receiverId, text })
+      socketRef.current.emit('sendMessage', { senderId: user._id, receiverId, text })
+      return tempMessage
+    }
 
-    return tempMessage
+    // Fallback to REST call
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        console.error('[ChatPage] sendMessage: no token')
+        return null
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/messages/send-message`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ receiverId, text })
+      })
+
+      if (!response.ok) {
+        const textRes = await response.text()
+        throw new Error(`HTTP ${response.status}: ${textRes}`)
+      }
+
+      const savedMessage: Message = await response.json()
+      console.log('[ChatPage] sendMessage rest success', savedMessage)
+      return savedMessage
+    } catch (error) {
+      console.error('[ChatPage] sendMessage REST error', error)
+      return tempMessage
+    }
   }
 
   const handleSend = async (e: React.FormEvent) => {

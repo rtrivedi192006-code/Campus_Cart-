@@ -8,6 +8,12 @@ exports.sendMessage = async (req, res) => {
     const { receiverId, text } = req.body;
     const senderId = req.user._id;
 
+    console.log('[messageController] sendMessage received', {
+      senderId: senderId.toString(),
+      receiverId,
+      text
+    });
+
     if (!receiverId || !text) {
       return res.status(400).json({ message: 'Receiver ID and text are required' });
     }
@@ -18,8 +24,11 @@ exports.sendMessage = async (req, res) => {
       text
     });
 
+    console.log('[messageController] sendMessage saved', message._id);
+
     res.status(201).json(message);
   } catch (error) {
+    console.error('[messageController] sendMessage error', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -32,6 +41,11 @@ exports.getMessages = async (req, res) => {
     const { userId: otherUserId } = req.params;
     const currentUserId = req.user._id;
 
+    console.log('[messageController] getMessages', {
+      currentUserId: currentUserId.toString(),
+      otherUserId
+    });
+
     const messages = await Message.find({
       $or: [
         { senderId: currentUserId, receiverId: otherUserId },
@@ -41,6 +55,7 @@ exports.getMessages = async (req, res) => {
 
     res.json(messages);
   } catch (error) {
+    console.error('[messageController] getMessages error', error);
     res.status(500).json({ message: error.message });
   }
 };
