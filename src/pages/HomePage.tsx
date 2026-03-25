@@ -125,7 +125,7 @@ export default function HomePage() {
               className="heroTitle"
               variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } } }}
             >
-              Buy, sell, and exchange items with antigravity vibes.
+              CampusCart — Buy, Sell & Exchange Within Your Campus
             </motion.h1>
             <motion.p 
               className="heroSub"
