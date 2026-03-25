@@ -66,27 +66,6 @@ export default function ChatPage() {
       return []
     }
   }
-      }
-
-      const response = await fetch(`http://localhost:5000/api/messages/${otherUserId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch messages')
-      }
-
-      const messages: Message[] = await response.json()
-      return messages
-    } catch (error) {
-      console.error('Error fetching messages:', error)
-      return []
-    }
-  }
 
   // Load conversations on component mount
   useEffect(() => {
