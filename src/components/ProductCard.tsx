@@ -30,7 +30,6 @@ export default function ProductCard({
   animateOnMount,
   onPrimaryAction,
   onOpen,
-  recommendedIdle,
 }: {
   product: Product
   index: number

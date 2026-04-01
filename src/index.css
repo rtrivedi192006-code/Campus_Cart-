@@ -304,28 +304,29 @@ code {
 
 .heroSection {
   position: relative;
-  border-radius: 24px;
+  border-radius: 28px;
   overflow: hidden;
   border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
 }
 
 .heroGlow {
   position: absolute;
-  inset: -80px -80px auto -80px;
-  height: 240px;
-  background: radial-gradient(circle at 20% 20%, rgba(170, 59, 255, 0.22), transparent 50%),
-    radial-gradient(circle at 65% 20%, rgba(34, 211, 238, 0.18), transparent 52%),
-    radial-gradient(circle at 50% 70%, rgba(99, 102, 241, 0.10), transparent 56%);
-  filter: blur(6px);
+  inset: -90px -90px auto -90px;
+  height: 260px;
+  background: radial-gradient(circle at 20% 20%, rgba(124, 58, 237, 0.12), transparent 50%),
+    radial-gradient(circle at 70% 15%, rgba(14, 165, 233, 0.1), transparent 48%),
+    radial-gradient(circle at 50% 70%, rgba(129, 140, 248, 0.08), transparent 58%);
+  filter: blur(8px);
   pointer-events: none;
 }
 
 .heroInner {
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
-  gap: 22px;
-  padding: 26px;
+  grid-template-columns: 1.3fr 0.9fr;
+  gap: 26px;
+  padding: 32px;
   align-items: center;
 }
 
@@ -337,7 +338,7 @@ code {
 
 .heroKicker {
   margin: 0 0 10px;
-  color: color-mix(in srgb, var(--accent) 65%, var(--text));
+  color: rgba(124, 58, 237, 0.82);
   font-weight: 600;
   letter-spacing: 0.2px;
 }
@@ -358,8 +359,8 @@ code {
 }
 
 .heroSub {
-  margin: 0 0 16px;
-  color: color-mix(in srgb, var(--text) 75%, var(--text-h));
+  margin: 0 0 20px;
+  color: var(--text-muted);
   max-width: 56ch;
 }
 
@@ -372,35 +373,49 @@ code {
 .heroStats {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 12px;
+  gap: 14px;
+}
+
+@media (min-width: 860px) {
+  .heroStats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .statCard {
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg) 72%, transparent);
-  border-radius: 18px;
-  padding: 14px 14px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: var(--surface);
+  border-radius: 22px;
+  padding: 18px 18px;
+  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+}
+
+.statCard:hover,
+.statCard:focus-within {
+  transform: translateY(-2px);
+  box-shadow: 0 22px 44px rgba(15, 23, 42, 0.08);
+  border-color: rgba(124, 58, 237, 0.18);
 }
 
 .statCard--accent {
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
-  background: linear-gradient(135deg, rgba(170, 59, 255, 0.12), rgba(34, 211, 238, 0.08));
+  border-color: rgba(124, 58, 237, 0.22);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(14, 165, 233, 0.08));
 }
 
 .statCard--glass {
-  background: color-mix(in srgb, var(--bg) 65%, transparent);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
 }
 
 .statValue {
   font-weight: 800;
-  font-size: 26px;
+  font-size: 30px;
   letter-spacing: -0.6px;
 }
 
 .statLabel {
-  color: color-mix(in srgb, var(--text) 70%, var(--text-h));
-  margin-top: 4px;
-  font-size: 13.5px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  font-size: 14px;
 }
 
 .section {

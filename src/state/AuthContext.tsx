@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 export type User = {
   email: string
   name: string
+  _id: string
 }
 
 type AuthContextValue = {
@@ -21,7 +22,7 @@ function safeParseUser(raw: string | null): User | null {
   if (!raw) return null
   try {
     const parsed = JSON.parse(raw) as User
-    if (!parsed?.email || !parsed?.name) return null
+    if (!parsed?.email || !parsed?.name || !parsed?._id) return null
     return parsed
   } catch {
     return null
@@ -44,13 +45,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login: async (email: string, _password: string) => {
         const cleanedEmail = email.trim().toLowerCase()
         const nameFromEmail = cleanedEmail.split('@')[0] || 'Student'
-        const nextUser: User = { email: cleanedEmail, name: nameFromEmail }
+        const nextUser: User = {
+          email: cleanedEmail,
+          name: nameFromEmail,
+          _id: Date.now().toString(),
+        }
         setUser(nextUser)
         navigate('/dashboard', { replace: true })
       },
       signup: async (email: string, _password: string, name: string) => {
         const cleanedEmail = email.trim().toLowerCase()
-        const nextUser: User = { email: cleanedEmail, name: name.trim() || 'Student' }
+        const nextUser: User = {
+          email: cleanedEmail,
+          name: name.trim() || 'Student',
+          _id: Date.now().toString(),
+        }
         setUser(nextUser)
         navigate('/dashboard', { replace: true })
       },

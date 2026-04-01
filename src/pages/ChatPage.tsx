@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, type FormEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Send, MoreVertical, Phone } from 'lucide-react'
 import { useAuth } from '../state/AuthContext'
@@ -26,11 +26,13 @@ export default function ChatPage() {
   const { user } = useAuth()
   const [activeId, setActiveId] = useState<string>('')
   const [conversations, setConversations] = useState<Conversation[]>([])
-  const [isTyping, setIsTyping] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [inputValue, setInputValue] = useState('')
   const [connectionStatus, setConnectionStatus] = useState<'online' | 'offline'>('offline')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const socketRef = useRef<Socket | null>(null)
 
+  const userId = user?._id ?? user?.email ?? ''
   const API_BASE_URL = 'http://192.168.0.100:5000' // <YOUR_LOCAL_IP> for mobile; update before production
 
   // Function to fetch messages from backend (HTTP)
@@ -104,7 +106,7 @@ export default function ChatPage() {
     loadConversations()
   }, [])
 
-  const activeConv = conversations.find(c => c.id === activeId)!
+  const activeConv = conversations.find(c => c.id === activeId) ?? null
 
   // Function to handle conversation selection
   const selectConversation = async (conversationId: string) => {
@@ -122,7 +124,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     scrollToBottom()
-  }, [activeConv.messages])
+  }, [activeConv?.messages])
 
   // Socket.IO setup
   useEffect(() => {
@@ -145,12 +147,7 @@ export default function ChatPage() {
       setConnectionStatus('online')
       
       // Join user's room
-      socket.emit('join', user._id)
-    })
-
-    socket.on('disconnect', () => {
-      console.log('Disconnected from server')
-      setConnectionStatus('offline')
+        socket.emit('join', userId)
     })
 
     // Message events
@@ -161,8 +158,8 @@ export default function ChatPage() {
       setConversations(prev =>
         prev.map(c => {
           // Check if this message belongs to this conversation
-          if ((message.senderId === c.otherUserId && message.receiverId === user._id) ||
-              (message.receiverId === c.otherUserId && message.senderId === user._id)) {
+          if ((message.senderId === c.otherUserId && message.receiverId === userId) ||
+              (message.receiverId === c.otherUserId && message.senderId === userId)) {
             return { ...c, messages: [...c.messages, message] }
           }
           return c
@@ -218,7 +215,7 @@ export default function ChatPage() {
 
     const tempMessage: Message = {
       _id: `temp-${Date.now()}`,
-      senderId: user._id,
+      senderId: userId,
       receiverId,
       text,
       createdAt: new Date().toISOString(),
@@ -227,7 +224,7 @@ export default function ChatPage() {
 
     if (socketRef.current && socketRef.current.connected) {
       console.log('[ChatPage] sendMessage via socket', { receiverId, text })
-      socketRef.current.emit('sendMessage', { senderId: user._id, receiverId, text })
+      socketRef.current.emit('sendMessage', { senderId: userId, receiverId, text })
       return tempMessage
     }
 
@@ -262,7 +259,7 @@ export default function ChatPage() {
     }
   }
 
-  const handleSend = async (e: React.FormEvent) => {
+  const handleSend = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!inputValue.trim() || !activeConv) return
 
@@ -352,7 +349,7 @@ export default function ChatPage() {
             ) : (
               <AnimatePresence initial={false}>
                 {activeConv?.messages.map((msg) => {
-                  const isMe = msg.senderId === user?._id
+                  const isMe = msg.senderId === userId
                   const messageDate = new Date(msg.createdAt)
                   const today = new Date()
                   const isToday = messageDate.toDateString() === today.toDateString()
