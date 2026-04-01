@@ -2,10 +2,10 @@
   display: flex;
   height: calc(100vh - 140px);
   border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: 24px;
   overflow: hidden;
-  background: color-mix(in srgb, var(--bg) 80%, transparent);
-  box-shadow: var(--shadow);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
   margin-top: 10px;
 }
 
@@ -14,7 +14,7 @@
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  background: color-mix(in srgb, var(--bg) 95%, transparent);
+  background: var(--surface-soft);
 }
 
 .chatSidebarHeader {
@@ -70,22 +70,26 @@
 
 .chatListItem {
   padding: 14px;
-  border-radius: 12px;
+  border-radius: 16px;
   cursor: pointer;
   border: 1px solid transparent;
-  background: transparent;
-  transition: all 0.2s ease;
+  background: var(--surface);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.chatListItem:hover {
-  background: color-mix(in srgb, var(--accent-bg) 30%, transparent);
+.chatListItem:hover,
+.chatListItem:focus-visible {
+  background: var(--surface-soft);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-soft);
+  outline: none;
 }
 
 .chatListItem--active {
-  background: var(--accent-bg);
+  background: rgba(124, 58, 237, 0.08);
   border-color: var(--accent-border);
 }
 
@@ -104,7 +108,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: color-mix(in srgb, var(--bg) 50%, transparent);
+  background: var(--surface-soft);
 }
 
 .chatHeader {
@@ -113,7 +117,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: color-mix(in srgb, var(--bg) 90%, transparent);
+  background: var(--surface);
   backdrop-filter: blur(10px);
 }
 
@@ -148,7 +152,7 @@
   font-size: 12px;
   padding: 4px 8px;
   border-radius: 12px;
-  background: var(--bg);
+  background: var(--surface);
   border: 1px solid var(--border);
 }
 
@@ -188,7 +192,7 @@
   right: -20px;
   width: 12px;
   height: 12px;
-  border: 2px solid #ccc;
+  border: 2px solid #cbd5e1;
   border-top: 2px solid var(--accent);
   border-radius: 50%;
   animation: spin 1s linear infinite;
