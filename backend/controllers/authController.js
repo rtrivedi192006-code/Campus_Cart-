@@ -17,7 +17,7 @@ exports.signup = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    // 🔴 Validation (IMPORTANT)
+    // Validation
     if (!name || !email || !password) {
       return res.status(400).json({
         message: 'Please fill all fields'
@@ -50,7 +50,7 @@ exports.signup = async (req, res) => {
   } catch (error) {
     console.error("Signup Error:", error);
     res.status(500).json({
-      message: "Server error during signup"
+      message: error.message
     });
   }
 };
@@ -62,7 +62,7 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // 🔴 Validation
+    // Validation
     if (!email || !password) {
       return res.status(400).json({
         message: 'Please provide email and password'
@@ -98,7 +98,7 @@ exports.login = async (req, res) => {
   } catch (error) {
     console.error("Login Error:", error);
     res.status(500).json({
-      message: "Server error during login"
+      message: error.message
     });
   }
 };
