@@ -1,0 +1,10 @@
+$kind: http-request
+name: 'Get Messages (Conversation)'
+method: GET
+url: '{{baseUrl}}/api/messages/{{userId}}'
+order: 2000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{token}}'

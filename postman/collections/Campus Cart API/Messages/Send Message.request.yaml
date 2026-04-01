@@ -1,0 +1,20 @@
+$kind: http-request
+name: Send Message
+method: POST
+url: '{{baseUrl}}/api/messages'
+order: 1000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{token}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "receiverId": "{{receiverId}}",
+      "text": "Hello, is this item still available?"
+    }

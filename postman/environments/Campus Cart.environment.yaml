@@ -1,0 +1,38 @@
+name: Campus Cart
+values:
+  - key: baseUrl
+    value: 'http://localhost:5000'
+    enabled: true
+    type: default
+  - key: token
+    value: ''
+    enabled: true
+    type: default
+  - key: productId
+    value: ''
+    enabled: true
+    type: default
+  - key: userId
+    value: ''
+    enabled: true
+    type: default
+  - key: receiverId
+    value: ''
+    enabled: true
+    type: default
+  - key: productOfferedId
+    value: ''
+    enabled: true
+    type: default
+  - key: productRequestedId
+    value: ''
+    enabled: true
+    type: default
+  - key: offeredToUserId
+    value: ''
+    enabled: true
+    type: default
+  - key: barterId
+    value: ''
+    enabled: true
+    type: default

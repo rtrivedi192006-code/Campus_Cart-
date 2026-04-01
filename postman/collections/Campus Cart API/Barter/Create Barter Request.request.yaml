@@ -1,0 +1,21 @@
+$kind: http-request
+name: Create Barter Request
+method: POST
+url: '{{baseUrl}}/api/barter'
+order: 1000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{token}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "productOffered": "{{productOfferedId}}",
+      "productRequested": "{{productRequestedId}}",
+      "offeredTo": "{{offeredToUserId}}"
+    }

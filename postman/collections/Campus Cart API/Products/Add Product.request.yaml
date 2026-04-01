@@ -1,0 +1,24 @@
+$kind: http-request
+name: Add Product
+method: POST
+url: '{{baseUrl}}/api/products'
+order: 3000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{token}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "Calculus Textbook",
+      "price": 25,
+      "category": "Books",
+      "condition": "Good",
+      "description": "Used calculus textbook, good condition",
+      "image": "https://example.com/image.jpg"
+    }
