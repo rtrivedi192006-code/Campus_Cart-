@@ -1,98 +1,87 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
-const morgan = require('morgan');
-const connectDB = require('./config/db');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 
-// Load environment variables
-require('dotenv').config();
+const connectDB = require('./config/db');
+const authRoutes = require('./routes/authRoutes');
+const productRoutes = require('./routes/productRoutes');
+const barterRoutes = require('./routes/barterRoutes');
+const wishlistRoutes = require('./routes/wishlistRoutes');
+const messageRoutes = require('./routes/messageRoutes');
+const Message = require('./models/Message');
 
-// Connect to database
-connectDB();
+const PORT = process.env.PORT || 5000;
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 
 const app = express();
-const server = createServer(app);
-const io = new Server(server, {
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
   cors: {
-    origin: "http://localhost:5175",
-    methods: ["GET", "POST"]
+    origin: CLIENT_URL,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
   }
 });
 
-// Server should run on port 5000
-const PORT = process.env.PORT || 5000;
+connectDB();
 
-// Middleware
-app.use(morgan('dev'));
-app.use(cors({
-  origin: [
-    'http://localhost:5176',
-    'http://localhost:5175',
-    'http://localhost:19006' // Expo default
-  ],
-  credentials: true
-}));
+app.use(cors({ origin: CLIENT_URL, credentials: true }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Routes
-const productRoutes = require('./routes/productRoutes');
-console.log("Product routes loaded");
-
+app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
-app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/barters', barterRoutes);
+app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/messages', messageRoutes);
 
-// Basic route
-app.get('/api/products', (req, res) => {
-  res.send("Products route working");
-});
 app.get('/', (req, res) => {
-  res.send('CampusCart API running');
+  res.json({ message: 'Campus Cart API is running' });
 });
 
-// Socket.IO connection handling
-io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+app.use((req, res) => {
+  res.status(404).json({ message: 'Route not found' });
+});
 
-  // Join user's room for private messaging
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  const status = err.status || 500;
+  res.status(status).json({ message: err.message || 'Server Error' });
+});
+
+io.on('connection', (socket) => {
+  console.log(`Socket connected: ${socket.id}`);
+
   socket.on('join', (userId) => {
+    if (!userId) return;
     socket.join(userId);
-    console.log(`User ${userId} joined room`);
+    console.log(`Socket ${socket.id} joined room ${userId}`);
   });
 
-  // Handle sending messages
-  socket.on('sendMessage', async (data) => {
+  socket.on('sendMessage', async ({ senderId, receiverId, text }) => {
     try {
-      const { senderId, receiverId, text } = data;
-      
-      // Save message to database
-      const Message = require('./models/Message');
-      const message = await Message.create({
-        senderId,
-        receiverId,
-        text
-      });
+      if (!senderId || !receiverId || !text) {
+        throw new Error('senderId, receiverId and text are required');
+      }
 
-      // Emit to receiver's room
+      const message = await Message.create({ senderId, receiverId, text });
+
       io.to(receiverId).emit('receiveMessage', message);
-      
-      // Also emit back to sender for confirmation
       io.to(senderId).emit('messageSent', message);
-      
-      console.log('Message sent:', message._id);
     } catch (error) {
-      console.error('Error sending message:', error);
-      socket.emit('messageError', { error: 'Failed to send message' });
+      console.error('[Socket] sendMessage error', error);
+      socket.emit('messageError', { message: error.message });
     }
   });
 
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+    console.log(`Socket disconnected: ${socket.id}`);
   });
 });
 
-// Start server
-server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+httpServer.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
 });
