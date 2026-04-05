@@ -7,7 +7,7 @@ const { createServer } = require('http');
 const { Server } = require('socket.io');
 
 // Load environment variables
-dotenv.config();
+require('dotenv').config();
 
 // Connect to database
 connectDB();
