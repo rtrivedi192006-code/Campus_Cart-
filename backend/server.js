@@ -37,11 +37,16 @@ app.use(cors({
 app.use(express.json());
 
 // Routes
-app.use('/api/auth', require('./routes/authRoutes'));
-app.use('/api/products', require('./routes/productRoutes'));
+const productRoutes = require('./routes/productRoutes');
+console.log("Product routes loaded");
 
+app.use('/api/products', productRoutes);
+app.use('/api/auth', require('./routes/authRoutes'));
 
 // Basic route
+app.get('/api/products', (req, res) => {
+  res.send("Products route working");
+});
 app.get('/', (req, res) => {
   res.send('CampusCart API running');
 });
