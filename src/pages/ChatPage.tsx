@@ -33,21 +33,16 @@ export default function ChatPage() {
   const socketRef = useRef<Socket | null>(null)
 
   const userId = user?._id ?? user?.email ?? ''
-  const API_BASE_URL = 'http://192.168.0.100:5000' // <YOUR_LOCAL_IP> for mobile; update before production
 
-  // Function to fetch messages from backend (HTTP)
+  // ✅ FIX: unified backend URL
+  const API_BASE_URL = 'http://localhost:5000'
+
   const fetchMessages = async (otherUserId: string) => {
     try {
       const token = localStorage.getItem('token')
-      if (!token) {
-        console.error('[ChatPage] fetchMessages: no token')
-        return []
-      }
+      if (!token) return []
 
-      const endpoint = `${API_BASE_URL}/api/messages/${otherUserId}`
-      console.log('[ChatPage] fetchMessages request:', endpoint)
-
-      const response = await fetch(endpoint, {
+      const response = await fetch(`${API_BASE_URL}/api/messages/${otherUserId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -55,44 +50,36 @@ export default function ChatPage() {
         }
       })
 
-      if (!response.ok) {
-        const text = await response.text()
-        throw new Error(`[ChatPage] fetchMessages failed: ${response.status} ${text}`)
-      }
+      if (!response.ok) throw new Error()
 
-      const data: Message[] = await response.json()
-      console.log('[ChatPage] fetchMessages response', data.length)
-      return data
+      return await response.json()
     } catch (error) {
-      console.error('[ChatPage] fetchMessages error', error)
+      console.error('fetchMessages error', error)
       return []
     }
   }
 
-  // Load conversations on component mount
   useEffect(() => {
     const loadConversations = async () => {
       setLoading(true)
-      // For now, we'll use mock conversations but fetch real messages
-      // In a real app, you'd fetch conversation list from backend
+
       const mockConversations: Conversation[] = [
         {
           id: 'c1',
           name: 'Kabir',
           product: 'Wireless Mouse (Silent Click)',
-          otherUserId: '507f1f77bcf86cd799439011', // Replace with real user ID
+          otherUserId: '507f1f77bcf86cd799439011',
           messages: []
         },
         {
           id: 'c2',
           name: 'Zoya',
           product: 'Noise-Canceling Headphones',
-          otherUserId: '507f1f77bcf86cd799439012', // Replace with real user ID
+          otherUserId: '507f1f77bcf86cd799439012',
           messages: []
         },
       ]
 
-      // Fetch messages for each conversation
       for (const conv of mockConversations) {
         const messages = await fetchMessages(conv.otherUserId)
         conv.messages = messages
@@ -108,58 +95,46 @@ export default function ChatPage() {
 
   const activeConv = conversations.find(c => c.id === activeId) ?? null
 
-  // Function to handle conversation selection
-  const selectConversation = async (conversationId: string) => {
-    setActiveId(conversationId)
-    // Messages will be refreshed automatically by the polling useEffect
-  }
-
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ 
-      behavior: 'smooth',
-      block: 'end',
-      inline: 'nearest'
-    })
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
   useEffect(() => {
     scrollToBottom()
   }, [activeConv?.messages])
 
-  // Socket.IO setup
+  // ✅ SOCKET SETUP (FIXED)
   useEffect(() => {
     if (!user) return
 
-    // Initialize socket connection
-    socketRef.current = io('http://localhost:5000', {
-      transports: ['websocket', 'polling'],
-      autoConnect: true,
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000
+    socketRef.current = io(API_BASE_URL, {
+      transports: ['websocket'],
+      withCredentials: true
     })
 
     const socket = socketRef.current
 
-    // Connection events
     socket.on('connect', () => {
-      console.log('Connected to server')
+      console.log('Connected')
       setConnectionStatus('online')
-      
-      // Join user's room
-        socket.emit('join', userId)
+      socket.emit('join', userId)
     })
 
-    // Message events
+    socket.on('disconnect', () => {
+      setConnectionStatus('offline')
+    })
+
+    // ✅ FIX: prevent duplicate messages
     socket.on('receiveMessage', (message: Message) => {
-      console.log('Received message:', message)
-      
-      // Update conversations with new message
       setConversations(prev =>
         prev.map(c => {
-          // Check if this message belongs to this conversation
-          if ((message.senderId === c.otherUserId && message.receiverId === userId) ||
-              (message.receiverId === c.otherUserId && message.senderId === userId)) {
+          if (
+            (message.senderId === c.otherUserId && message.receiverId === userId) ||
+            (message.receiverId === c.otherUserId && message.senderId === userId)
+          ) {
+            const exists = c.messages.some(m => m._id === message._id)
+            if (exists) return c
+
             return { ...c, messages: [...c.messages, message] }
           }
           return c
@@ -168,50 +143,44 @@ export default function ChatPage() {
     })
 
     socket.on('messageSent', (message: Message) => {
-      console.log('Message sent confirmation:', message)
-      
-      // Replace temporary message with real message
       setConversations(prev =>
         prev.map(c =>
-          c.id === activeId ? {
-            ...c,
-            messages: c.messages.map(m => 
-              m._id.startsWith('temp-') && m.text === message.text ? message : m
-            )
-          } : c
+          c.id === activeId
+            ? {
+                ...c,
+                messages: c.messages.map(m =>
+                  m._id.startsWith('temp-') && m.text === message.text
+                    ? message
+                    : m
+                ),
+              }
+            : c
         )
       )
     })
 
-    socket.on('messageError', (error) => {
-      console.error('Message error:', error)
-      
-      // Remove failed temporary message
+    socket.on('messageError', () => {
       setConversations(prev =>
         prev.map(c =>
-          c.id === activeId ? {
-            ...c,
-            messages: c.messages.filter(m => !m._id.startsWith('temp-'))
-          } : c
+          c.id === activeId
+            ? {
+                ...c,
+                messages: c.messages.filter(m => !m._id.startsWith('temp-')),
+              }
+            : c
         )
       )
-      
-      // Could show error toast here
-      alert('Failed to send message. Please try again.')
+
+      alert('Failed to send message')
     })
 
-    // Cleanup on unmount
     return () => {
       socket.disconnect()
     }
-  }, [user])
+  }, [user, userId, activeId])
 
-  // Function to send a message
   const sendMessage = async (receiverId: string, text: string): Promise<Message | null> => {
-    if (!user) {
-      console.error('[ChatPage] sendMessage: no user')
-      return null
-    }
+    if (!user) return null
 
     const tempMessage: Message = {
       _id: `temp-${Date.now()}`,
@@ -222,21 +191,16 @@ export default function ChatPage() {
       updatedAt: new Date().toISOString()
     }
 
-    if (socketRef.current && socketRef.current.connected) {
-      console.log('[ChatPage] sendMessage via socket', { receiverId, text })
+    if (socketRef.current?.connected) {
       socketRef.current.emit('sendMessage', { senderId: userId, receiverId, text })
       return tempMessage
     }
 
-    // Fallback to REST call
     try {
       const token = localStorage.getItem('token')
-      if (!token) {
-        console.error('[ChatPage] sendMessage: no token')
-        return null
-      }
+      if (!token) return null
 
-      const response = await fetch(`${API_BASE_URL}/api/messages/send-message`, {
+      const res = await fetch(`${API_BASE_URL}/api/messages/send-message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -245,16 +209,10 @@ export default function ChatPage() {
         body: JSON.stringify({ receiverId, text })
       })
 
-      if (!response.ok) {
-        const textRes = await response.text()
-        throw new Error(`HTTP ${response.status}: ${textRes}`)
-      }
+      if (!res.ok) throw new Error()
 
-      const savedMessage: Message = await response.json()
-      console.log('[ChatPage] sendMessage rest success', savedMessage)
-      return savedMessage
-    } catch (error) {
-      console.error('[ChatPage] sendMessage REST error', error)
+      return await res.json()
+    } catch {
       return tempMessage
     }
   }
@@ -264,11 +222,13 @@ export default function ChatPage() {
     if (!inputValue.trim() || !activeConv) return
 
     const newMessage = await sendMessage(activeConv.otherUserId, inputValue)
+
     if (newMessage) {
-      // Update local state optimistically
       setConversations(prev =>
         prev.map(c =>
-          c.id === activeId ? { ...c, messages: [...c.messages, newMessage] } : c
+          c.id === activeId
+            ? { ...c, messages: [...c.messages, newMessage] }
+            : c
         )
       )
       setInputValue('')
@@ -277,152 +237,63 @@ export default function ChatPage() {
 
   return (
     <div className="page">
-      <motion.div 
-        className="sectionHeader"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
+      <motion.div className="sectionHeader" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
         <div>
           <h1 className="heroTitle heroTitle--tight">Campus Chat</h1>
           <p className="sectionSub">Talk to buyers and sellers in real-time style UI.</p>
         </div>
       </motion.div>
 
-      <motion.div 
-        className="chatContainer"
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4, type: 'spring', stiffness: 200 }}
-      >
+      <div className="chatContainer">
         <div className="chatSidebar">
           <div className="chatSidebarHeader">
-            <h2 className="chatSidebarTitle">Conversations</h2>
+            <h2>Conversations</h2>
           </div>
-          <div className="chatList">
-            {loading ? (
-              <div className="loading">Loading conversations...</div>
-            ) : (
-              conversations.map(conv => (
-                <div 
-                  key={conv.id} 
-                  className={`chatListItem ${activeId === conv.id ? 'chatListItem--active' : ''}`}
-                  onClick={() => selectConversation(conv.id)}
-                >
-                  <div className="chatListName">{conv.name}</div>
-                  <div className="chatListProduct">{conv.product}</div>
-                </div>
-              ))
-            )}
-          </div>
+
+          {conversations.map(conv => (
+            <div
+              key={conv.id}
+              className={`chatListItem ${activeId === conv.id ? 'chatListItem--active' : ''}`}
+              onClick={() => setActiveId(conv.id)}
+            >
+              <div>{conv.name}</div>
+              <div>{conv.product}</div>
+            </div>
+          ))}
         </div>
 
         <div className="chatMain">
           <div className="chatHeader">
-            <div className="chatHeaderInfo">
-              <h3 className="chatHeaderName">
-                {loading ? 'Loading...' : activeConv?.name || 'Select a conversation'}
-              </h3>
-              <span className="chatHeaderProduct">
-                {loading ? '' : activeConv ? `Regarding: ${activeConv.product}` : ''}
-              </span>
-            </div>
-            <div className="chatHeaderActions">
-              <div className={`connectionStatus connectionStatus--${connectionStatus}`}>
-                <div className="connectionDot"></div>
-                <span className="connectionText">{connectionStatus === 'online' ? 'Online' : 'Offline'}</span>
-              </div>
-              <div style={{ display: 'flex', gap: '16px', color: 'var(--text)' }}>
-                <Phone size={20} cursor="pointer" />
-                <MoreVertical size={20} cursor="pointer" />
-              </div>
-            </div>
+            <h3>{activeConv?.name}</h3>
+            <span>{connectionStatus}</span>
           </div>
 
           <div className="chatMessages">
-            {loading ? (
-              <div className="loading">Loading messages...</div>
-            ) : activeConv?.messages.length === 0 ? (
-              <div className="emptyChat">
-                <div className="emptyChatIcon">💬</div>
-                <div className="emptyChatText">No messages yet. Start the conversation!</div>
-              </div>
-            ) : (
-              <AnimatePresence initial={false}>
-                {activeConv?.messages.map((msg) => {
-                  const isMe = msg.senderId === userId
-                  const messageDate = new Date(msg.createdAt)
-                  const today = new Date()
-                  const isToday = messageDate.toDateString() === today.toDateString()
-                  
-                  let timestamp
-                  if (isToday) {
-                    timestamp = messageDate.toLocaleTimeString([], { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })
-                  } else {
-                    timestamp = messageDate.toLocaleDateString([], {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })
-                  }
-                  
-                  return (
-                    <motion.div
-                      key={msg._id}
-                      className={`messageWrapper messageWrapper--${isMe ? 'sent' : 'received'} ${msg._id.startsWith('temp-') ? 'messageWrapper--pending' : ''}`}
-                      initial={{ opacity: 0, x: isMe ? 20 : -20, y: 10 }}
-                      animate={{ opacity: 1, x: 0, y: 0 }}
-                      transition={{ type: 'spring', stiffness: 300, damping: 24 }}
-                      layout
-                    >
-                      <div className={`messageBubble messageBubble--${isMe ? 'sent' : 'received'} ${msg._id.startsWith('temp-') ? 'messageBubble--pending' : ''}`}>
-                        {msg.text}
-                      </div>
-                      <div className="messageTime">
-                        {msg._id.startsWith('temp-') ? 'Sending...' : timestamp}
-                      </div>
-                    </motion.div>
-                  )
-                })}
-              </AnimatePresence>
-            )}
+            <AnimatePresence>
+              {activeConv?.messages.map(msg => {
+                const isMe = msg.senderId === userId
+                return (
+                  <motion.div key={msg._id} className={isMe ? 'sent' : 'received'}>
+                    {msg.text}
+                  </motion.div>
+                )
+              })}
+            </AnimatePresence>
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="chatInputArea">
-            <form onSubmit={handleSend} className="chatInputForm">
-              <input
-                type="text"
-                className="chatInput"
-                placeholder="Type a message..."
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    handleSend(e as any)
-                  }
-                }}
-                autoFocus
-              />
-              <button 
-                type="submit" 
-                className="chatSendBtn"
-                disabled={!inputValue.trim()}
-                title={inputValue.trim() ? "Send Message (Enter)" : "Type a message to send"}
-              >
-                <Send size={18} />
-              </button>
-            </form>
-            <div className="chatInputHint">
-              Press Enter to send • Shift+Enter for new line
-            </div>
-          </div>
+          <form onSubmit={handleSend} className="chatInputForm">
+            <input
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="Type message..."
+            />
+            <button type="submit">
+              <Send size={18} />
+            </button>
+          </form>
         </div>
-      </motion.div>
+      </div>
     </div>
   )
 }
