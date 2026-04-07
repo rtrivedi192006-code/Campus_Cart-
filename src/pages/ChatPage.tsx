@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, type FormEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Send, MoreVertical, Phone } from 'lucide-react'
+import { Send } from 'lucide-react'
 import { useAuth } from '../state/AuthContext'
 import { io, Socket } from 'socket.io-client'
 import './ChatPage.css'
@@ -24,166 +24,92 @@ type Conversation = {
 
 export default function ChatPage() {
   const { user } = useAuth()
-  const [activeId, setActiveId] = useState<string>('')
+  const [activeId, setActiveId] = useState('')
   const [conversations, setConversations] = useState<Conversation[]>([])
-  const [loading, setLoading] = useState(true)
   const [inputValue, setInputValue] = useState('')
-  const [connectionStatus, setConnectionStatus] = useState<'online' | 'offline'>('offline')
-  const messagesEndRef = useRef<HTMLDivElement>(null)
   const socketRef = useRef<Socket | null>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const userId = user?._id ?? user?.email ?? ''
+  const userId = user?._id ?? ''
 
-  // ✅ FIX: unified backend URL
   const API_BASE_URL = 'http://localhost:5000'
 
-  const fetchMessages = async (otherUserId: string) => {
-    try {
-      const token = localStorage.getItem('token')
-      if (!token) return []
-
-      const response = await fetch(`${API_BASE_URL}/api/messages/${otherUserId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        }
-      })
-
-      if (!response.ok) throw new Error()
-
-      return await response.json()
-    } catch (error) {
-      console.error('fetchMessages error', error)
-      return []
-    }
-  }
-
+  // 🔹 Load conversations
   useEffect(() => {
-    const loadConversations = async () => {
-      setLoading(true)
-
-      const mockConversations: Conversation[] = [
+    const init = async () => {
+      const mock: Conversation[] = [
         {
           id: 'c1',
           name: 'Kabir',
-          product: 'Wireless Mouse (Silent Click)',
+          product: 'Mouse',
           otherUserId: '507f1f77bcf86cd799439011',
           messages: []
-        },
-        {
-          id: 'c2',
-          name: 'Zoya',
-          product: 'Noise-Canceling Headphones',
-          otherUserId: '507f1f77bcf86cd799439012',
-          messages: []
-        },
+        }
       ]
 
-      for (const conv of mockConversations) {
-        const messages = await fetchMessages(conv.otherUserId)
-        conv.messages = messages
+      for (let c of mock) {
+        const res = await fetch(`${API_BASE_URL}/api/messages/${c.otherUserId}`)
+        c.messages = await res.json()
       }
 
-      setConversations(mockConversations)
-      setActiveId(mockConversations[0]?.id || '')
-      setLoading(false)
+      setConversations(mock)
+      setActiveId(mock[0].id)
     }
 
-    loadConversations()
+    init()
   }, [])
 
-  const activeConv = conversations.find(c => c.id === activeId) ?? null
+  const activeConv = conversations.find(c => c.id === activeId)
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  useEffect(() => {
-    scrollToBottom()
-  }, [activeConv?.messages])
-
-  // ✅ SOCKET SETUP (FIXED)
+  // 🔹 Socket setup
   useEffect(() => {
     if (!user) return
 
-    socketRef.current = io(API_BASE_URL, {
-      transports: ['websocket'],
-      withCredentials: true
-    })
+    socketRef.current = io(API_BASE_URL)
 
     const socket = socketRef.current
 
     socket.on('connect', () => {
-      console.log('Connected')
-      setConnectionStatus('online')
       socket.emit('join', userId)
     })
 
-    socket.on('disconnect', () => {
-      setConnectionStatus('offline')
-    })
-
-    // ✅ FIX: prevent duplicate messages
-    socket.on('receiveMessage', (message: Message) => {
+    socket.on('receiveMessage', (msg: Message) => {
       setConversations(prev =>
         prev.map(c => {
           if (
-            (message.senderId === c.otherUserId && message.receiverId === userId) ||
-            (message.receiverId === c.otherUserId && message.senderId === userId)
+            (msg.senderId === c.otherUserId && msg.receiverId === userId) ||
+            (msg.receiverId === c.otherUserId && msg.senderId === userId)
           ) {
-            const exists = c.messages.some(m => m._id === message._id)
-            if (exists) return c
-
-            return { ...c, messages: [...c.messages, message] }
+            if (c.messages.some(m => m._id === msg._id)) return c
+            return { ...c, messages: [...c.messages, msg] }
           }
           return c
         })
       )
     })
 
-    socket.on('messageSent', (message: Message) => {
+    socket.on('messageSent', (msg: Message) => {
       setConversations(prev =>
         prev.map(c =>
           c.id === activeId
             ? {
                 ...c,
                 messages: c.messages.map(m =>
-                  m._id.startsWith('temp-') && m.text === message.text
-                    ? message
-                    : m
-                ),
+                  m._id.startsWith('temp') ? msg : m
+                )
               }
             : c
         )
       )
     })
 
-    socket.on('messageError', () => {
-      setConversations(prev =>
-        prev.map(c =>
-          c.id === activeId
-            ? {
-                ...c,
-                messages: c.messages.filter(m => !m._id.startsWith('temp-')),
-              }
-            : c
-        )
-      )
-
-      alert('Failed to send message')
-    })
-
-    return () => {
-      socket.disconnect()
-    }
+    return () => socket.disconnect()
   }, [user, userId, activeId])
 
-  const sendMessage = async (receiverId: string, text: string): Promise<Message | null> => {
-    if (!user) return null
-
-    const tempMessage: Message = {
-      _id: `temp-${Date.now()}`,
+  // 🔹 Send message
+  const sendMessage = async (receiverId: string, text: string) => {
+    const temp: Message = {
+      _id: 'temp-' + Date.now(),
       senderId: userId,
       receiverId,
       text,
@@ -193,106 +119,71 @@ export default function ChatPage() {
 
     if (socketRef.current?.connected) {
       socketRef.current.emit('sendMessage', { senderId: userId, receiverId, text })
-      return tempMessage
+      return temp
     }
 
-    try {
-      const token = localStorage.getItem('token')
-      if (!token) return null
+    // ✅ FIXED endpoint here
+    const res = await fetch(`${API_BASE_URL}/api/messages/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ senderId: userId, receiverId, text })
+    })
 
-      const res = await fetch(`${API_BASE_URL}/api/messages/send-message`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ receiverId, text })
-      })
-
-      if (!res.ok) throw new Error()
-
-      return await res.json()
-    } catch {
-      return tempMessage
-    }
+    return await res.json()
   }
 
-  const handleSend = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSend = async (e: FormEvent) => {
     e.preventDefault()
-    if (!inputValue.trim() || !activeConv) return
+    if (!inputValue || !activeConv) return
 
-    const newMessage = await sendMessage(activeConv.otherUserId, inputValue)
+    const msg = await sendMessage(activeConv.otherUserId, inputValue)
 
-    if (newMessage) {
-      setConversations(prev =>
-        prev.map(c =>
-          c.id === activeId
-            ? { ...c, messages: [...c.messages, newMessage] }
-            : c
-        )
+    setConversations(prev =>
+      prev.map(c =>
+        c.id === activeId
+          ? { ...c, messages: [...c.messages, msg] }
+          : c
       )
-      setInputValue('')
-    }
+    )
+
+    setInputValue('')
   }
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [activeConv?.messages])
 
   return (
-    <div className="page">
-      <motion.div className="sectionHeader" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        <div>
-          <h1 className="heroTitle heroTitle--tight">Campus Chat</h1>
-          <p className="sectionSub">Talk to buyers and sellers in real-time style UI.</p>
-        </div>
-      </motion.div>
-
-      <div className="chatContainer">
-        <div className="chatSidebar">
-          <div className="chatSidebarHeader">
-            <h2>Conversations</h2>
+    <div className="chatContainer">
+      <div className="chatSidebar">
+        {conversations.map(c => (
+          <div key={c.id} onClick={() => setActiveId(c.id)}>
+            {c.name}
           </div>
+        ))}
+      </div>
 
-          {conversations.map(conv => (
-            <div
-              key={conv.id}
-              className={`chatListItem ${activeId === conv.id ? 'chatListItem--active' : ''}`}
-              onClick={() => setActiveId(conv.id)}
-            >
-              <div>{conv.name}</div>
-              <div>{conv.product}</div>
-            </div>
-          ))}
+      <div className="chatMain">
+        <div className="chatMessages">
+          <AnimatePresence>
+            {activeConv?.messages.map(m => (
+              <motion.div key={m._id}>
+                {m.text}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          <div ref={messagesEndRef} />
         </div>
 
-        <div className="chatMain">
-          <div className="chatHeader">
-            <h3>{activeConv?.name}</h3>
-            <span>{connectionStatus}</span>
-          </div>
-
-          <div className="chatMessages">
-            <AnimatePresence>
-              {activeConv?.messages.map(msg => {
-                const isMe = msg.senderId === userId
-                return (
-                  <motion.div key={msg._id} className={isMe ? 'sent' : 'received'}>
-                    {msg.text}
-                  </motion.div>
-                )
-              })}
-            </AnimatePresence>
-            <div ref={messagesEndRef} />
-          </div>
-
-          <form onSubmit={handleSend} className="chatInputForm">
-            <input
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Type message..."
-            />
-            <button type="submit">
-              <Send size={18} />
-            </button>
-          </form>
-        </div>
+        <form onSubmit={handleSend}>
+          <input
+            value={inputValue}
+            onChange={e => setInputValue(e.target.value)}
+          />
+          <button type="submit">
+            <Send size={18} />
+          </button>
+        </form>
       </div>
     </div>
   )
