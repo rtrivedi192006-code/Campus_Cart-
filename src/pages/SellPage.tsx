@@ -52,6 +52,17 @@ export default function SellPage() {
               placeholder="Your generated description will appear here..."
             />
           </label>
+
+          <div className="aiRow">
+            <button
+              className="primaryBtn primaryBtn--fill"
+              type="button"
+              disabled={!title.trim() || !description.trim()}
+              onClick={() => console.log('Sell item:', { title, description })}
+            >
+              Sell Item
+            </button>
+          </div>
         </motion.div>
       </section>
     </div>

@@ -9,21 +9,53 @@ import NotFoundPage from './pages/NotFoundPage'
 import WishlistPage from './pages/WishlistPage'
 import ChatPage from './pages/ChatPage'
 import SellPage from './pages/SellPage'
+import { useAuth } from './state/AuthContext'
 
 export default function App() {
   const location = useLocation()
+  const { user } = useAuth()
 
   return (
     <div className="appShell">
       <SiteHeader />
       <main className="appMain">
         <Routes location={location}>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/chat" element={<ChatPage />} />
-          <Route path="/sell" element={<SellPage />} />
-          <Route path="/wishlist" element={<WishlistPage />} />
+          <Route
+            path="/"
+            element={user ? <HomePage /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/login"
+            element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />}
+          />
+          <Route
+            path="/signup"
+            element={user ? <Navigate to="/dashboard" replace /> : <SignupPage />}
+          />
+          <Route
+            path="/chat"
+            element={
+              <RequireAuth>
+                <ChatPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/sell"
+            element={
+              <RequireAuth>
+                <SellPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/wishlist"
+            element={
+              <RequireAuth>
+                <WishlistPage />
+              </RequireAuth>
+            }
+          />
           <Route
             path="/dashboard"
             element={
