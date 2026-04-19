@@ -56,11 +56,21 @@ export default function ChatPage() {
         }
       ]
 
-      for (let c of mock) {
-        const res = await fetch(`${API_BASE_URL}/api/messages/${c.otherUserId}`)
-        c.messages = await res.json()
-      }
+      const res = await fetch(`${API_BASE_URL}/api/messages/${userId}`)
+      const messages = await res.json()
 
+      const conversations: Conversation[] = [
+        {
+          id: 'c1',
+          name: 'User',
+          product: 'Item',
+          otherUserId: userId,
+          messages
+        }
+      ]
+
+      setConversations(conversations)
+      setActiveId('c1')
       setConversations(mock)
       setActiveId(mock[0].id)
     }
