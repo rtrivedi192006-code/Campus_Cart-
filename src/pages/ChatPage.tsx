@@ -40,10 +40,19 @@ export default function ChatPage() {
       const mock: Conversation[] = [
         {
           id: 'c1',
-          name: 'Kabir',
+          name: 'Test User',
           product: 'Mouse',
-          otherUserId: '507f1f77bcf86cd799439011',
-          messages: []
+          otherUserId: userId,
+          messages: [
+            {
+              _id: '1',
+              senderId: userId,
+              receiverId: userId,
+              text: 'Hello, this is a test message',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            }
+          ]
         }
       ]
 
@@ -93,11 +102,11 @@ export default function ChatPage() {
         prev.map(c =>
           c.id === activeId
             ? {
-                ...c,
-                messages: c.messages.map(m =>
-                  m._id.startsWith('temp') ? msg : m
-                )
-              }
+              ...c,
+              messages: c.messages.map(m =>
+                m._id.startsWith('temp') ? msg : m
+              )
+            }
             : c
         )
       )
