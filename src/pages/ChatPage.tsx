@@ -24,65 +24,57 @@ type Conversation = {
 
 export default function ChatPage() {
   const { user } = useAuth()
+  const userId = user?._id ?? ''
+  const token = user?.token ?? ''
+
   const [activeId, setActiveId] = useState('')
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [inputValue, setInputValue] = useState('')
+
   const socketRef = useRef<Socket | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const userId = user?._id ?? ''
-
   const API_BASE_URL = 'http://localhost:5000'
 
-  // 🔹 Load conversations
+  // 🔹 Load messages
   useEffect(() => {
     const init = async () => {
-      const mock: Conversation[] = [
-        {
-          id: 'c1',
-          name: 'Test User',
-          product: 'Mouse',
-          otherUserId: userId,
-          messages: [
-            {
-              _id: '1',
-              senderId: userId,
-              receiverId: userId,
-              text: 'Hello, this is a test message',
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            }
-          ]
-        }
-      ]
+      try {
+        if (!userId || !token) return
 
-      const res = await fetch(`${API_BASE_URL}/api/messages/${userId}`)
-      const messages = await res.json()
+        const res = await fetch(`${API_BASE_URL}/api/messages/${userId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
 
-      const conversations: Conversation[] = [
-        {
-          id: 'c1',
-          name: 'User',
-          product: 'Item',
-          otherUserId: userId,
-          messages
-        }
-      ]
+        const messages = await res.json()
 
-      setConversations(conversations)
-      setActiveId('c1')
-      setConversations(mock)
-      setActiveId(mock[0].id)
+        const conv: Conversation[] = [
+          {
+            id: 'c1',
+            name: 'Chat',
+            product: 'Item',
+            otherUserId: userId,
+            messages
+          }
+        ]
+
+        setConversations(conv)
+        setActiveId('c1')
+      } catch (err) {
+        console.error('Chat load error:', err)
+      }
     }
 
     init()
-  }, [])
+  }, [userId, token])
 
   const activeConv = conversations.find(c => c.id === activeId)
 
   // 🔹 Socket setup
   useEffect(() => {
-    if (!user) return
+    if (!userId) return
 
     socketRef.current = io(API_BASE_URL)
 
@@ -123,7 +115,7 @@ export default function ChatPage() {
     })
 
     return () => socket.disconnect()
-  }, [user, userId, activeId])
+  }, [userId, activeId])
 
   // 🔹 Send message
   const sendMessage = async (receiverId: string, text: string) => {
@@ -141,10 +133,12 @@ export default function ChatPage() {
       return temp
     }
 
-    // ✅ FIXED endpoint here
-    const res = await fetch(`${API_BASE_URL}/api/messages/send`, {
+    const res = await fetch(`${API_BASE_URL}/api/messages/send-message`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
       body: JSON.stringify({ senderId: userId, receiverId, text })
     })
 
