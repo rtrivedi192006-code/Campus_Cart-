@@ -1,203 +1,80 @@
-import { useState, useRef, useEffect, type FormEvent } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Send } from 'lucide-react'
-import { useAuth } from '../state/AuthContext'
-import { io, Socket } from 'socket.io-client'
-import './ChatPage.css'
-
-type Message = {
-  _id: string
-  senderId: string
-  receiverId: string
-  text: string
-  createdAt: string
-  updatedAt: string
-}
-
-type Conversation = {
-  id: string
-  name: string
-  product: string
-  messages: Message[]
-  otherUserId: string
-}
+import { useState } from "react";
 
 export default function ChatPage() {
-  const { user } = useAuth()
-  const userId = user?._id ?? ''
-  const token = user?.token ?? ''
+    const [message, setMessage] = useState("");
 
-  const [activeId, setActiveId] = useState('')
-  const [conversations, setConversations] = useState<Conversation[]>([])
-  const [inputValue, setInputValue] = useState('')
+    const handleSend = () => {
+        if (!message.trim()) return;
+        alert("Message sent: " + message);
+        setMessage("");
+    };
 
-  const socketRef = useRef<Socket | null>(null)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+    return (
+        <div style={styles.container}>
+            <h2 style={styles.heading}>Chat System</h2>
 
-  const API_BASE_URL = 'http://localhost:5000'
+            <div style={styles.chatBox}>
+                <p style={styles.placeholder}>No messages yet...</p>
+            </div>
 
-  // 🔹 Load messages
-  useEffect(() => {
-    const init = async () => {
-      try {
-        if (!userId || !token) return
-
-        const res = await fetch(`${API_BASE_URL}/api/messages/${userId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
-
-        const messages = await res.json()
-
-        const conv: Conversation[] = [
-          {
-            id: 'c1',
-            name: 'Chat',
-            product: 'Item',
-            otherUserId: userId,
-            messages
-          }
-        ]
-
-        setConversations(conv)
-        setActiveId('c1')
-      } catch (err) {
-        console.error('Chat load error:', err)
-      }
-    }
-
-    init()
-  }, [userId, token])
-
-  const activeConv = conversations.find(c => c.id === activeId)
-
-  // 🔹 Socket setup
-  useEffect(() => {
-    if (!userId) return
-
-    socketRef.current = io(API_BASE_URL)
-
-    const socket = socketRef.current
-
-    socket.on('connect', () => {
-      socket.emit('join', userId)
-    })
-
-    socket.on('receiveMessage', (msg: Message) => {
-      setConversations(prev =>
-        prev.map(c => {
-          if (
-            (msg.senderId === c.otherUserId && msg.receiverId === userId) ||
-            (msg.receiverId === c.otherUserId && msg.senderId === userId)
-          ) {
-            if (c.messages.some(m => m._id === msg._id)) return c
-            return { ...c, messages: [...c.messages, msg] }
-          }
-          return c
-        })
-      )
-    })
-
-    socket.on('messageSent', (msg: Message) => {
-      setConversations(prev =>
-        prev.map(c =>
-          c.id === activeId
-            ? {
-              ...c,
-              messages: c.messages.map(m =>
-                m._id.startsWith('temp') ? msg : m
-              )
-            }
-            : c
-        )
-      )
-    })
-
-    return () => socket.disconnect()
-  }, [userId, activeId])
-
-  // 🔹 Send message
-  const sendMessage = async (receiverId: string, text: string) => {
-    const temp: Message = {
-      _id: 'temp-' + Date.now(),
-      senderId: userId,
-      receiverId,
-      text,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-
-    if (socketRef.current?.connected) {
-      socketRef.current.emit('sendMessage', { senderId: userId, receiverId, text })
-      return temp
-    }
-
-    const res = await fetch(`${API_BASE_URL}/api/messages/send-message`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ senderId: userId, receiverId, text })
-    })
-
-    return await res.json()
-  }
-
-  const handleSend = async (e: FormEvent) => {
-    e.preventDefault()
-    if (!inputValue || !activeConv) return
-
-    const msg = await sendMessage(activeConv.otherUserId, inputValue)
-
-    setConversations(prev =>
-      prev.map(c =>
-        c.id === activeId
-          ? { ...c, messages: [...c.messages, msg] }
-          : c
-      )
-    )
-
-    setInputValue('')
-  }
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [activeConv?.messages])
-
-  return (
-    <div className="chatContainer">
-      <div className="chatSidebar">
-        {conversations.map(c => (
-          <div key={c.id} onClick={() => setActiveId(c.id)}>
-            {c.name}
-          </div>
-        ))}
-      </div>
-
-      <div className="chatMain">
-        <div className="chatMessages">
-          <AnimatePresence>
-            {activeConv?.messages.map(m => (
-              <motion.div key={m._id}>
-                {m.text}
-              </motion.div>
-            ))}
-          </AnimatePresence>
-          <div ref={messagesEndRef} />
+            <div style={styles.inputArea}>
+                <input
+                    type="text"
+                    placeholder="Type a message..."
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    style={styles.input}
+                />
+                <button onClick={handleSend} style={styles.button}>
+                    Send
+                </button>
+            </div>
         </div>
-
-        <form onSubmit={handleSend}>
-          <input
-            value={inputValue}
-            onChange={e => setInputValue(e.target.value)}
-          />
-          <button type="submit">
-            <Send size={18} />
-          </button>
-        </form>
-      </div>
-    </div>
-  )
+    );
 }
+
+const styles: { [key: string]: React.CSSProperties } = {
+    container: {
+        maxWidth: "600px",
+        margin: "40px auto",
+        padding: "20px",
+        border: "1px solid #ddd",
+        borderRadius: "10px",
+        fontFamily: "Arial",
+    },
+    heading: {
+        textAlign: "center",
+    },
+    chatBox: {
+        height: "300px",
+        border: "1px solid #ccc",
+        borderRadius: "8px",
+        padding: "10px",
+        marginBottom: "10px",
+        overflowY: "auto",
+        backgroundColor: "#f9f9f9",
+    },
+    placeholder: {
+        color: "#888",
+        textAlign: "center",
+        marginTop: "120px",
+    },
+    inputArea: {
+        display: "flex",
+        gap: "10px",
+    },
+    input: {
+        flex: 1,
+        padding: "10px",
+        borderRadius: "5px",
+        border: "1px solid #ccc",
+    },
+    button: {
+        padding: "10px 15px",
+        border: "none",
+        borderRadius: "5px",
+        backgroundColor: "#007bff",
+        color: "#fff",
+        cursor: "pointer",
+    },
+};
